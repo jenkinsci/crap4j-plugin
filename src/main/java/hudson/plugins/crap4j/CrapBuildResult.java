@@ -1,14 +1,15 @@
 package hudson.plugins.crap4j;
 
+import com.thoughtworks.xstream.XStream;
 import hudson.XmlFile;
 import hudson.model.AbstractBuild;
+import hudson.model.Hudson;
 import hudson.model.ModelObject;
 import hudson.plugins.crap4j.display.DecreasingCrapLoadComparator;
 import hudson.plugins.crap4j.model.ICrapMethodPresentation;
 import hudson.plugins.crap4j.model.IMethodCrap;
 import hudson.plugins.crap4j.model.ProjectCrapBean;
 import hudson.util.XStream2;
-
 import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -18,12 +19,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import jenkins.model.Jenkins;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
-
-import com.thoughtworks.xstream.XStream;
-import hudson.model.Hudson;
 
 public class CrapBuildResult implements ModelObject, ICrapMethodPresentation {
 	
@@ -92,7 +90,7 @@ public class CrapBuildResult implements ModelObject, ICrapMethodPresentation {
 	
 	//@Override
 	public String getTitle() {
-		return "All Crappy Methods for <a href=\"" + Hudson.getInstance().getRootUrlFromRequest() + getOwner().getUrl() + "\">" + getOwner().getDisplayName() + "</a>";
+		return "All Crappy Methods for <a href=\"" + Jenkins.getInstance().getRootUrl() + getOwner().getUrl() + "\">" + getOwner().getDisplayName() + "</a>";
 	}
 	
 	//@Override
