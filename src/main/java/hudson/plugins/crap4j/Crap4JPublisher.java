@@ -33,8 +33,7 @@ import com.schneide.crap4j.reader.ReportReader;
 import com.schneide.crap4j.reader.model.ICrapReport;
 import com.schneide.crap4j.reader.model.IMethodCrapData;
 import hudson.Extension;
-import hudson.matrix.MatrixProject;
-import hudson.model.FreeStyleProject;
+import hudson.model.Result;
 import hudson.tasks.Recorder;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -48,136 +47,140 @@ public class Crap4JPublisher extends Recorder {
     @Extension
     public static final Crap4JPluginDescriptor DESCRIPTOR = new Crap4JPluginDescriptor();
 
-	private String reportPattern;
-	private String healthThreshold;
+    private String reportPattern;
+    private String healthThreshold;
 
-	/**
-	 * @param reportPattern
-	 */
-        @DataBoundConstructor
-	public Crap4JPublisher(String reportPattern,
-			String healthThreshold) {
-		super();
-		this.reportPattern = reportPattern;
-		this.healthThreshold = healthThreshold;
-	}
+    /**
+     * @param reportPattern
+     */
+    @DataBoundConstructor
+    public Crap4JPublisher(String reportPattern,
+                    String healthThreshold) {
+            super();
+            this.reportPattern = reportPattern;
+            this.healthThreshold = healthThreshold;
+    }
 
-	private HealthBuilder getHealthBuilderFor(String healthThreshold) {
-		if ((null == healthThreshold) || (healthThreshold.isEmpty())) {
-			return DESCRIPTOR.getHealthBuilder();
-		}
-		try {
-			return new HealthBuilder(Double.parseDouble(healthThreshold));
-		} catch (NumberFormatException e) {
-            LOGGER.log(Level.WARNING, "Could not parse health threshold representation to a number: " + healthThreshold, e);
-			return DESCRIPTOR.getHealthBuilder();
-		} catch (IllegalArgumentException e) {
-            LOGGER.log(Level.WARNING, "Not a valid health threshold: " + healthThreshold, e);
-			return DESCRIPTOR.getHealthBuilder();
-		}
-	}
+    private HealthBuilder getHealthBuilderFor(String healthThreshold) {
+            if ((null == healthThreshold) || (healthThreshold.isEmpty())) {
+                    return DESCRIPTOR.getHealthBuilder();
+            }
+            try {
+                    return new HealthBuilder(Double.parseDouble(healthThreshold));
+            } catch (NumberFormatException e) {
+        LOGGER.log(Level.WARNING, "Could not parse health threshold representation to a number: " + healthThreshold, e);
+                    return DESCRIPTOR.getHealthBuilder();
+            } catch (IllegalArgumentException e) {
+        LOGGER.log(Level.WARNING, "Not a valid health threshold: " + healthThreshold, e);
+                    return DESCRIPTOR.getHealthBuilder();
+            }
+    }
 
-	@Override
-	public BuildStepDescriptor<Publisher> getDescriptor() {
-		return DESCRIPTOR;
-	}
+    @Override
+    public BuildStepDescriptor<Publisher> getDescriptor() {
+            return DESCRIPTOR;
+    }
 
-	@Override
-	public Action getProjectAction(AbstractProject<?, ?> project) {
-		return new Crap4JProjectAction(project);
-	}
+    @Override
+    public Action getProjectAction(AbstractProject<?, ?> project) {
+            return new Crap4JProjectAction(project);
+    }
 
-	public BuildStepMonitor getRequiredMonitorService() {
-		return BuildStepMonitor.BUILD;
-	}
+    public BuildStepMonitor getRequiredMonitorService() {
+            return BuildStepMonitor.BUILD;
+    }
 
     protected void log(final PrintStream logger, final String message) {
         logger.println("[CRAP4J] " + message);
     }
 
-	@Override
-	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher,
-			BuildListener listener) throws InterruptedException, IOException {
+    /**
+     * @return <code>true</code> if the build can continue, <code>false</code> otherwise
+     */
+    @Override
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher,
+                    BuildListener listener) throws InterruptedException, IOException {
         PrintStream logger = listener.getLogger();
         log(logger, "Collecting Crap4J analysis files...");
 
         log(logger, "Searching for report files within " + this.reportPattern);
         log(logger, "Using the new FileSetBuilder");
-        
+
         ReportFilesFinder finder = new ReportFilesFinder(this.reportPattern);
         FoundFile[] reports = build.getWorkspace().act(finder);
         if (0 == reports.length) {
             log(logger, "No crap4j report files were found. Configuration error?");
+            build.setResult(Result.FAILURE);
             return false;
         }
         ProjectCrapBean previousCrap = getPreviousProjectCrapBean(build);
         ProjectCrapBean reportBean = createCurrentProjectCrapBean(logger,
-				reports, previousCrap);
+                                reports, previousCrap);
         build.getActions().add(new Crap4JBuildAction(
-        		build,
-        		new CrapBuildResult(build, reportBean),
-        		getHealthBuilderFor(this.healthThreshold)));
-		return true;
-	}
+                        build,
+                        new CrapBuildResult(build, reportBean),
+                        getHealthBuilderFor(this.healthThreshold)));
+        return true;
+    }
 
-	private ProjectCrapBean getPreviousProjectCrapBean(AbstractBuild<?, ?> build) {
+    private ProjectCrapBean getPreviousProjectCrapBean(AbstractBuild<?, ?> build) {
         CrapBuildResult previousResult = CrapBuildResult.getPrevious(build);
         if (null != previousResult) {
-        	return previousResult.getResultData();
+            return previousResult.getResultData();
         }
-		return null;
-	}
+        return null;
+    }
 
-	private ProjectCrapBean createCurrentProjectCrapBean(PrintStream logger,
-			FoundFile[] reports, ProjectCrapBean previousCrap)
-			throws UnsupportedEncodingException, IOException {
-		ProjectCrapBean[] currentBeans = loadProjectCrapBeans(logger, reports, previousCrap);
-		if (1 == currentBeans.length) {
-			return currentBeans[0];
-		}
-		CrapReportMerger merger = new CrapReportMerger();
-		return merger.mergeReports(previousCrap, currentBeans);
-	}
-	
-	private ProjectCrapBean[] loadProjectCrapBeans(PrintStream logger,
-			FoundFile[] reports, ProjectCrapBean previousCrap)
-			throws UnsupportedEncodingException, IOException {
-		List<ProjectCrapBean> result = new ArrayList<ProjectCrapBean>();
-		for (FoundFile currentReportFile : reports) {
-			Reader reportReader = new BufferedReader(
-	        		new InputStreamReader(
-	        				currentReportFile.getFile().read(),
-	        				currentReportFile.getEncoding()));
-	        ReportReader parser = new ReportReader(reportReader);
-	        ICrapReport report = parser.parseData();
-	        ProjectCrapBean reportBean = new ProjectCrapBean(
-	        		previousCrap,
-	        		report.getStatistics(),
-	        		convertToMethodCrap(report.getDetails().getMethodCrapManager().getCrapData()));
-	        log(logger, "Got a report bean with " + reportBean.getCrapMethodCount() + " crap methods out of " + reportBean.getMethodCount() + " methods.");
-	        result.add(reportBean);
-		}
-		return result.toArray(new ProjectCrapBean[result.size()]);
-	}
+    private ProjectCrapBean createCurrentProjectCrapBean(PrintStream logger,
+                    FoundFile[] reports, ProjectCrapBean previousCrap)
+                    throws UnsupportedEncodingException, IOException {
+        ProjectCrapBean[] currentBeans = loadProjectCrapBeans(logger, reports, previousCrap);
+        if (1 == currentBeans.length) {
+                return currentBeans[0];
+        }
+        CrapReportMerger merger = new CrapReportMerger();
+        return merger.mergeReports(previousCrap, currentBeans);
+    }
 
-	private IMethodCrap[] convertToMethodCrap(Collection<IMethodCrapData> crapData) {
-		IMethodCrap[] result = new IMethodCrap[crapData.size()];
-		Iterator<IMethodCrapData> dataIterator = crapData.iterator();
-		int index = 0;
-		while (dataIterator.hasNext()) {
-			result[index] = new MethodCrapBean(dataIterator.next());
-			index++;
-		}
-		return result;
-	}
+    private ProjectCrapBean[] loadProjectCrapBeans(PrintStream logger,
+                    FoundFile[] reports, ProjectCrapBean previousCrap)
+                    throws UnsupportedEncodingException, IOException {
+        List<ProjectCrapBean> result = new ArrayList<ProjectCrapBean>();
+        for (FoundFile currentReportFile : reports) {
+                Reader reportReader = new BufferedReader(
+                        new InputStreamReader(
+                                        currentReportFile.getFile().read(),
+                                        currentReportFile.getEncoding()));
+        ReportReader parser = new ReportReader(reportReader);
+        ICrapReport report = parser.parseData();
+        ProjectCrapBean reportBean = new ProjectCrapBean(
+                        previousCrap,
+                        report.getStatistics(),
+                        convertToMethodCrap(report.getDetails().getMethodCrapManager().getCrapData()));
+        log(logger, "Got a report bean with " + reportBean.getCrapMethodCount() + " crap methods out of " + reportBean.getMethodCount() + " methods.");
+        result.add(reportBean);
+        }
+        return result.toArray(new ProjectCrapBean[result.size()]);
+    }
 
-	public String getReportPattern() {
-            return this.reportPattern;
-	}
+    private IMethodCrap[] convertToMethodCrap(Collection<IMethodCrapData> crapData) {
+            IMethodCrap[] result = new IMethodCrap[crapData.size()];
+            Iterator<IMethodCrapData> dataIterator = crapData.iterator();
+            int index = 0;
+            while (dataIterator.hasNext()) {
+                    result[index] = new MethodCrapBean(dataIterator.next());
+                    index++;
+            }
+            return result;
+    }
 
-	public String getHealthThreshold() {
-            return this.healthThreshold;
-	}
+    public String getReportPattern() {
+        return this.reportPattern;
+    }
+
+    public String getHealthThreshold() {
+        return this.healthThreshold;
+    }
 
     public void setHealthThreshold(String healthThreshold) {
         this.healthThreshold = healthThreshold;
@@ -231,7 +234,7 @@ public class Crap4JPublisher extends Recorder {
 	@SuppressWarnings("unchecked")
 	@Override
 	public boolean isApplicable(Class<? extends AbstractProject> jobType) {
-            return (FreeStyleProject.class.isAssignableFrom(jobType) || MatrixProject.class.isAssignableFrom(jobType));
+            return true;
 	}
     }
 }
