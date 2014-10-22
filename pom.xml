@@ -11,7 +11,7 @@
   <name>Jenkins Crap4J plugin</name>
   <groupId>org.jenkins-ci.plugins</groupId>
   <artifactId>crap4j</artifactId>
-  <version>0.9</version>
+  <version>0.10-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <url>https://wiki.jenkins-ci.org/display/JENKINS/Crap4J+Plugin</url>
   <developers>
