@@ -67,6 +67,12 @@
             <url>http://repo.jenkins-ci.org/public/</url>
         </pluginRepository>
     </pluginRepositories>
+
+    <scm>
+        <connection>scm:git:ssh://github.com/jenkinsci/crap4j-plugin.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/jenkinsci/crap4j-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/crap4j-plugin</url>
+    </scm>
 </project>  
   
 
