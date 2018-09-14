@@ -9,7 +9,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import jenkins.security.Roles;
 import org.apache.tools.ant.types.FileSet;
+import org.jenkinsci.remoting.RoleChecker;
 
 public class ReportFilesFinder implements FileCallable<FoundFile[]> {
 
@@ -94,4 +96,9 @@ public class ReportFilesFinder implements FileCallable<FoundFile[]> {
 //            project.addModule(module);
 //        }
 	}
+
+    @Override
+    public void checkRoles(RoleChecker checker) throws SecurityException {
+        checker.check(this, Roles.MASTER);
+    }
 }

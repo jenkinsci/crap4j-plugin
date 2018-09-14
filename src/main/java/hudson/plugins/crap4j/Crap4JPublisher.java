@@ -1,10 +1,11 @@
 package hudson.plugins.crap4j;
 
+import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.AbstractBuild;
+import hudson.model.Run;
 import hudson.model.AbstractProject;
 import hudson.model.Action;
-import hudson.model.BuildListener;
+import hudson.model.TaskListener;
 import hudson.plugins.crap4j.calculation.HealthBuilder;
 import hudson.plugins.crap4j.model.CrapReportMerger;
 import hudson.plugins.crap4j.model.IMethodCrap;
@@ -29,6 +30,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Nonnull;
+import jenkins.tasks.SimpleBuildStep;
 import com.schneide.crap4j.reader.ReportReader;
 import com.schneide.crap4j.reader.model.ICrapReport;
 import com.schneide.crap4j.reader.model.IMethodCrapData;
@@ -39,7 +42,7 @@ import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
-public class Crap4JPublisher extends Recorder {
+public class Crap4JPublisher extends Recorder implements SimpleBuildStep {
 
     /** Logger. */
     private static final Logger LOGGER = Logger.getLogger(Crap4JPublisher.class.getName());
@@ -94,12 +97,10 @@ public class Crap4JPublisher extends Recorder {
         logger.println("[CRAP4J] " + message);
     }
 
-    /**
-     * @return <code>true</code> if the build can continue, <code>false</code> otherwise
-     */
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher,
-                    BuildListener listener) throws InterruptedException, IOException {
+    public void perform(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull Launcher launcher,
+                        @Nonnull TaskListener listener) throws InterruptedException, IOException {
+                            
         PrintStream logger = listener.getLogger();
         log(logger, "Collecting Crap4J analysis files...");
 
@@ -107,23 +108,23 @@ public class Crap4JPublisher extends Recorder {
         log(logger, "Using the new FileSetBuilder");
 
         ReportFilesFinder finder = new ReportFilesFinder(this.reportPattern);
-        FoundFile[] reports = build.getWorkspace().act(finder);
+        FoundFile[] reports = workspace.act(finder);
         if (0 == reports.length) {
             log(logger, "No crap4j report files were found. Configuration error?");
-            build.setResult(Result.FAILURE);
-            return false;
+            run.setResult(Result.FAILURE);
         }
-        ProjectCrapBean previousCrap = getPreviousProjectCrapBean(build);
-        ProjectCrapBean reportBean = createCurrentProjectCrapBean(logger,
-                                reports, previousCrap);
-        build.getActions().add(new Crap4JBuildAction(
-                        build,
-                        new CrapBuildResult(build, reportBean),
+        
+        ProjectCrapBean previousCrap = getPreviousProjectCrapBean(run);        
+        ProjectCrapBean reportBean = createCurrentProjectCrapBean(logger, reports, previousCrap);
+        
+        run.getActions().add(new Crap4JBuildAction(
+                        run,
+                        new CrapBuildResult(run, reportBean),
                         getHealthBuilderFor(this.healthThreshold)));
-        return true;
     }
 
-    private ProjectCrapBean getPreviousProjectCrapBean(AbstractBuild<?, ?> build) {
+
+    private ProjectCrapBean getPreviousProjectCrapBean(Run<?, ?> build) {
         CrapBuildResult previousResult = CrapBuildResult.getPrevious(build);
         if (null != previousResult) {
             return previousResult.getResultData();
@@ -133,7 +134,7 @@ public class Crap4JPublisher extends Recorder {
 
     private ProjectCrapBean createCurrentProjectCrapBean(PrintStream logger,
                     FoundFile[] reports, ProjectCrapBean previousCrap)
-                    throws UnsupportedEncodingException, IOException {
+                    throws UnsupportedEncodingException, IOException, InterruptedException {
         ProjectCrapBean[] currentBeans = loadProjectCrapBeans(logger, reports, previousCrap);
         if (1 == currentBeans.length) {
                 return currentBeans[0];
@@ -144,7 +145,7 @@ public class Crap4JPublisher extends Recorder {
 
     private ProjectCrapBean[] loadProjectCrapBeans(PrintStream logger,
                     FoundFile[] reports, ProjectCrapBean previousCrap)
-                    throws UnsupportedEncodingException, IOException {
+                    throws UnsupportedEncodingException, IOException, InterruptedException {
         List<ProjectCrapBean> result = new ArrayList<ProjectCrapBean>();
         for (FoundFile currentReportFile : reports) {
                 Reader reportReader = new BufferedReader(
@@ -236,5 +237,5 @@ public class Crap4JPublisher extends Recorder {
 	public boolean isApplicable(Class<? extends AbstractProject> jobType) {
             return true;
 	}
-    }
+}
 }

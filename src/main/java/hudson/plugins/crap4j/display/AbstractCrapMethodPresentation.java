@@ -3,7 +3,7 @@
  */
 package hudson.plugins.crap4j.display;
 
-import hudson.model.AbstractBuild;
+import hudson.model.Run;
 import hudson.model.ModelObject;
 import hudson.plugins.crap4j.model.ICrapMethodPresentation;
 import hudson.plugins.crap4j.model.IMethodCrap;
@@ -16,16 +16,16 @@ import java.util.List;
 public abstract class AbstractCrapMethodPresentation implements ICrapMethodPresentation, ModelObject {
 
 	private final String title;
-	private final AbstractBuild<?, ?> owner;
+	private final Run<?, ?> owner;
 
-	public AbstractCrapMethodPresentation(AbstractBuild<?, ?> owner,
+	public AbstractCrapMethodPresentation(Run<?, ?> owner,
 			String title) {
 		super();
 		this.owner = owner;
 		this.title = title;
 	}
 	
-	public AbstractBuild<?, ?> getOwner() {
+	public Run<?, ?> getOwner() {
 		return this.owner;
 	}
 	

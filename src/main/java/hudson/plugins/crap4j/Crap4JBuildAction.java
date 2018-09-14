@@ -1,6 +1,7 @@
 package hudson.plugins.crap4j;
 
 import hudson.model.AbstractBuild;
+import hudson.model.Run;
 import hudson.model.HealthReport;
 import hudson.model.HealthReportingAction;
 import hudson.plugins.crap4j.calculation.HealthBuilder;
@@ -21,10 +22,10 @@ public class Crap4JBuildAction implements StaplerProxy, HealthReportingAction {
 	
 	private static final long serialVersionUID = 8586323795728749743L;
 	private final CrapBuildResult crapResult;
-	private final AbstractBuild<?, ?> build;
+	private final Run<?, ?> build;
 	private transient HealthBuilder healthBuilder;
 	
-	public Crap4JBuildAction(AbstractBuild<?, ?> owner,
+	public Crap4JBuildAction(Run<?, ?> owner,
 			CrapBuildResult crapResult,
 			HealthBuilder healthBuilder) {
 		super();
