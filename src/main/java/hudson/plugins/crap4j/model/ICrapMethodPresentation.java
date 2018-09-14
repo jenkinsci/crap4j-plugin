@@ -1,12 +1,12 @@
 package hudson.plugins.crap4j.model;
 
-import hudson.model.AbstractBuild;
+import hudson.model.Run;
 
 import java.util.Collection;
 
 public interface ICrapMethodPresentation {
 	
-	public AbstractBuild<?, ?> getOwner();
+	public Run<?, ?> getOwner();
 
 	public String getTitle();
 	

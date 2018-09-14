@@ -2,6 +2,7 @@ package hudson.plugins.crap4j;
 
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.Run;
 import hudson.model.Action;
 
 import java.io.IOException;
@@ -46,44 +47,44 @@ public class Crap4JProjectAction implements Action, StaplerProxy {
 		return this.project;
 	}
 	
-    public final boolean hasValidResults(final AbstractBuild<?, ?> build) {
-        if (build != null) {
-        	Crap4JBuildAction resultAction = build.getAction(Crap4JBuildAction.class);
-            if (resultAction != null) {
-                return resultAction.hasPreviousCrap();
-            }
-        }
-        return false;
+  public final boolean hasValidResults(final Run<?, ?> build) {
+      if (build != null) {
+        Crap4JBuildAction resultAction = build.getAction(Crap4JBuildAction.class);
+          if (resultAction != null) {
+              return resultAction.hasPreviousCrap();
+          }
+      }
+      return false;
+  }
+
+  public void doGraph(final StaplerRequest request, final StaplerResponse response) throws IOException {
+    doTrend(request, response);
+  }
+
+  public Crap4JBuildAction getLastResultAction() {
+    Run<?, ?> lastSuccessfulBuild = this.project.getLastSuccessfulBuild();
+    if (null == lastSuccessfulBuild) {
+      return null;
     }
-	
-    public void doGraph(final StaplerRequest request, final StaplerResponse response) throws IOException {
-    	doTrend(request, response);
-    }
-	
-    public Crap4JBuildAction getLastResultAction() {
-    	AbstractBuild<?, ?> lastSuccessfulBuild = this.project.getLastSuccessfulBuild();
-    	if (null == lastSuccessfulBuild) {
-    		return null;
-    	}
-        Crap4JBuildAction action = lastSuccessfulBuild.getAction(Crap4JBuildAction.class);
-        return action;
-    }
-    
-    public void doTrendMap(final StaplerRequest request, final StaplerResponse response) throws IOException {
-    	Crap4JBuildAction action = getLastResultAction();
-    	if (action == null) {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return;
-        }
-        action.doGraphMap(request, response);
-    }
-    
-    public void doTrend(final StaplerRequest request, final StaplerResponse response) throws IOException {
-    	Crap4JBuildAction action = getLastResultAction();
-    	if (action == null) {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return;
-        }
-        action.doGraph(request, response);
-    }
+      Crap4JBuildAction action = lastSuccessfulBuild.getAction(Crap4JBuildAction.class);
+      return action;
+  }
+  
+  public void doTrendMap(final StaplerRequest request, final StaplerResponse response) throws IOException {
+    Crap4JBuildAction action = getLastResultAction();
+    if (action == null) {
+          response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+          return;
+      }
+      action.doGraphMap(request, response);
+  }
+  
+  public void doTrend(final StaplerRequest request, final StaplerResponse response) throws IOException {
+    Crap4JBuildAction action = getLastResultAction();
+    if (action == null) {
+          response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+          return;
+      }
+      action.doGraph(request, response);
+  }
 }

@@ -3,7 +3,7 @@ package hudson.plugins.crap4j;
 import com.thoughtworks.xstream.XStream;
 import hudson.XmlFile;
 import hudson.model.AbstractBuild;
-import hudson.model.Hudson;
+import hudson.model.Run;
 import hudson.model.ModelObject;
 import hudson.plugins.crap4j.display.DecreasingCrapLoadComparator;
 import hudson.plugins.crap4j.model.ICrapMethodPresentation;
@@ -26,7 +26,7 @@ import org.kohsuke.stapler.StaplerResponse;
 public class CrapBuildResult implements ModelObject, ICrapMethodPresentation {
 	
 	private transient WeakReference<ProjectCrapBean> crap; 
-	private AbstractBuild<?, ?> owner;
+	private Run<?, ?> owner;
 
     /** Logger. */
     private static final Logger LOGGER = Logger.getLogger(CrapBuildResult.class.getName());
@@ -36,7 +36,7 @@ public class CrapBuildResult implements ModelObject, ICrapMethodPresentation {
         XSTREAM.alias("crap", ProjectCrapBean.class);
     }
 
-	public CrapBuildResult(AbstractBuild<?, ?> owner,
+	public CrapBuildResult(Run<?, ?> owner,
 			ProjectCrapBean crap) {
 		super();
 		this.owner = owner;
@@ -48,11 +48,11 @@ public class CrapBuildResult implements ModelObject, ICrapMethodPresentation {
         }
 	}
 	
-	public void setOwner(AbstractBuild<?, ?> owner) {
+	public void setOwner(Run<?, ?> owner) {
 		this.owner = owner;
 	}
 	
-	public AbstractBuild<?, ?> getOwner() {
+	public Run<?, ?> getOwner() {
 		return this.owner;
 	}
 	
@@ -186,8 +186,8 @@ public class CrapBuildResult implements ModelObject, ICrapMethodPresentation {
 		return getPrevious(getOwner());
 	}
 	
-	public static CrapBuildResult getPrevious(AbstractBuild<?, ?> currentBuild) {
-		AbstractBuild<?,?> previous = currentBuild.getPreviousBuild();
+	public static CrapBuildResult getPrevious(Run<?, ?> currentBuild) {
+		Run<?,?> previous = currentBuild.getPreviousBuild();
 		while (null != previous) {
 			Crap4JBuildAction action = previous.getAction(Crap4JBuildAction.class);
 			if (null != action) {
